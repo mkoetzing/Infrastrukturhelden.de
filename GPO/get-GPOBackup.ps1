@@ -107,7 +107,8 @@ Param(
     [switch]$PolicyDefinitions,
     [switch]$testerror,
     [switch]$testwarning,
-    [switch]$testerrorwarning
+    [switch]$testerrorwarning,
+    [switch]$zipFolder
 )
 
 #Verknüfungsorte mit speichern
@@ -123,10 +124,12 @@ IF ($BackupPath.EndsWith("\") -like "False") { $BackupPath =$BackupPath+"\" }
 IF (!(Test-Path $BackupPath)) { new-item -Path $BackupPath -ItemType directory }
 
 $date = get-date -format yyyyMMdd-HHmm
-$ErrorLog =$BackupPath+$date+"-error.log"
-$InfoLog =$BackupPath+$date+"-info.log"
-$WarningLog =$BackupPath+$date+"-warning.log"
-$Report = $BackupPath+$date+"-Report.csv"
+$zipname = $BackupPath+$date+"-GPO-Backup.zip"
+#logs inside backup folder
+$ErrorLog = $BackupPath+'\'+$date+'\'+"error.log"
+$InfoLog = $BackupPath+'\'+$date+'\'+"info.log"
+$WarningLog = $BackupPath+'\'+$date+'\'+"warning.log"
+$Report = $BackupPath+'\'+$date+'\'+"Report.csv"
 Write-Verbose "Import Grouppolicy module"
 try
 {
@@ -338,6 +341,24 @@ If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     IF ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) { Get-EventLog -LogName Application -Source "GPObackup" -Newest 1 | FL }
   }
 }
+
+if ($zipFolder -eq $true){
+    Write-verbose "zipping backup-folder."
+    Add-Type -assembly "system.io.compression.filesystem"
+    $zipResult = [System.IO.Compression.ZipFile]::CreateFromDirectory($BackupPath, $zipname) 
+    if($?)
+        {
+           Write-verbose "zipFile successful written."
+           Write-verbose "Remove zipped Folder."
+           Remove-Item $BackupPath -Recurse -Force
+
+        }
+        else
+        {
+           Write-verbose "zipping folder failed."
+        }
+}
+
 
 $after = Get-Date
 
